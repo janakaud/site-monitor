@@ -1,0 +1,153 @@
+{
+ "EDITOR_STATE": {
+  "allProjectFiles": {
+   "5e9a61d0-0b96-48dd-9f24-e2e4ca37f077": {
+    "id": "5e9a61d0-0b96-48dd-9f24-e2e4ca37f077",
+    "parent": null,
+    "name": "site-monitor",
+    "type": "DIRECTORY",
+    "isDirectory": true,
+    "children": [
+     "cbf8aebe-fb07-4d43-883b-064eed1b8573"
+    ],
+    "isRemovable": false,
+    "filePath": "site-monitor"
+   },
+   "cbf8aebe-fb07-4d43-883b-064eed1b8573": {
+    "id": "cbf8aebe-fb07-4d43-883b-064eed1b8573",
+    "parent": "5e9a61d0-0b96-48dd-9f24-e2e4ca37f077",
+    "name": "lambda.js",
+    "type": "LAMBDA_FILE",
+    "isDirectory": false,
+    "children": [],
+    "isRemovable": true,
+    "filePath": "site-monitor/lambda.js",
+    "code": "let AWS = require('aws-sdk');\nconst ses = new AWS.SES();\nconst ddb = new AWS.DynamoDB.DocumentClient();\nconst request = require(\"request\");\n\nexports.handler = function (event, context, callback) {\n    request.get(\"http://www.my-favorite-site.com\",\n        (error, response, body) => {\n            if (!body) {\n                throw new Error(\"Failed to fetch homepage!\");\n            }\n\n            let urls = body.match(/(lp|\\?r=specialTopic)\\/[^\"]*/);\n            if (!urls) { // nothing found; no point in proceeding\n                return;\n            }\n            let url = urls[0];\n\n            ddb.get({\n                TableName: 'site-data',\n                Key: { 'domain': 'my-favorite-site.com' }\n            }, function (err, data) {\n                if (err) {\n                    throw err;\n                } else {\n                    if (data.Item != url) {\n                        ses.sendEmail({\n                            Destination: {\n                                ToAddresses: ['janakaud@gmail.com'],\n                                CcAddresses: [],\n                                BccAddresses: []\n                            },\n                            Message: {\n                                Body: {\n                                    Text: {\n                                        Data: url\n                                    }\n                                },\n                                Subject: {\n                                    Data: 'MyFavSite Update!'\n                                }\n                            },\n                            Source: 'janakaud@gmail.com',\n                        }, function (err, data) {\n                            if (err) {\n                                throw err;\n                            }\n                            ddb.put({\n                                TableName: 'site-data',\n                                Item: { 'domain': url }\n                            }, function (err, data) {\n                                if (err) {\n                                    throw err;\n                                } else {\n                                    console.log(\"New URL saved successfully!\");\n                                }\n                            });\n                        });\n                    } else {\n                        console.log(\"URL already sent out; ignoring\");\n                    }\n                }\n            });\n        });\n\n    callback(null, 'Successfully executed');\n}",
+    "triggers": [
+     {
+      "resourceName": "cweoneAM",
+      "config": {}
+     }
+    ],
+    "config": {
+     "memory": 128,
+     "timeout": 60,
+     "runtime": "nodejs8.10"
+    },
+    "testCases": {
+     "d85dea1e-68e9-4c9d-b588-a199bb65b815": {
+      "id": "d85dea1e-68e9-4c9d-b588-a199bb65b815",
+      "name": "myfavsite",
+      "functionId": "cbf8aebe-fb07-4d43-883b-064eed1b8573",
+      "event": "{\n    \"key1\": \"value1\",\n    \"key2\": \"value2\",\n    \"key3\": \"value3\"\n}"
+     }
+    }
+   }
+  },
+  "rootNode": "5e9a61d0-0b96-48dd-9f24-e2e4ca37f077",
+  "openFiles": [
+   "cbf8aebe-fb07-4d43-883b-064eed1b8573"
+  ],
+  "currentFileId": "cbf8aebe-fb07-4d43-883b-064eed1b8573",
+  "resources": {
+   "ddbsiteData": {
+    "name": "ddbsiteData",
+    "type": "DynamoDB",
+    "config": {
+     "mode": 0,
+     "operation": "put",
+     "table": {
+      "arn": "",
+      "name": "site-data",
+      "partitionKey": "domain",
+      "partitionKeyType": "S",
+      "hasSortKey": false,
+      "sortKey": "",
+      "sortKeyType": "S",
+      "mode": 0
+     },
+     "parameters": {
+      "Key": {},
+      "Item": {
+       "domain": "@{url}"
+      },
+      "ExpressionAttributeValues": {}
+     },
+     "validator": {
+      "validatableFields": {},
+      "validity": true
+     },
+     "valid": true
+    },
+    "globallyEditable": false
+   },
+   "ses-janakaud@gmail.com": {
+    "name": "ses-janakaud@gmail.com",
+    "type": "SES",
+    "config": {
+     "selectedIdentity": "janakaud@gmail.com",
+     "projectRegion": "us-east-1",
+     "params": {
+      "to": "janakaud@gmail.com",
+      "cc": "",
+      "bcc": "",
+      "subject": "MyFavSite Update!",
+      "body": {
+       "text": "@{url}",
+       "html": ""
+      }
+     }
+    },
+    "globallyEditable": false
+   },
+   "cweoneAM": {
+    "name": "cweoneAM",
+    "type": "CLOUD_WATCH",
+    "config": {
+     "mode": 0,
+     "name": "oneAM",
+     "description": "",
+     "scheduleExpression": "cron(0 1 * * ? *)"
+    },
+    "globallyEditable": true
+   }
+  },
+  "envVariables": [
+   {
+    "lambdaId": "all",
+    "varKey": "SIGMA_AWS_ACC_ID",
+    "varValue": null,
+    "shouldPersist": false,
+    "editable": false
+   }
+  ],
+  "packageJSON": {
+   "dependencies": {
+    "aws-sdk": {
+     "name": "aws-sdk",
+     "version": "2.176.0",
+     "notRemovable": true
+    },
+    "request": {
+     "name": "request",
+     "version": "2.87.0"
+    }
+   }
+  },
+  "lambdaId": "cbf8aebe-fb07-4d43-883b-064eed1b8573"
+ },
+ "PROJECT_META": {
+  "projectName": "site-monitor",
+  "projectDescription": "keep watch on my favorite sites while I'm away",
+  "projectVersion": "1.0.0",
+  "projectRegion": "us-east-1",
+  "lastSave": 1531654948036
+ },
+ "VCS_STATE": {
+  "provider": "GITHUB",
+  "repo": {
+   "name": "site-monitor",
+   "url": "https://github.com/janakaud/site-monitor"
+  }
+ }
+}
