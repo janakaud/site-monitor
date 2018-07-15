@@ -23,7 +23,7 @@ exports.handler = function (event, context, callback) {
                 if (err) {
                     throw err;
                 } else {
-                    if (data.Item != url) {
+                    if (!data.Item || data.Item.url != url) {
                         ses.sendEmail({
                             Destination: {
                                 ToAddresses: ['janakaud@gmail.com'],
@@ -47,7 +47,7 @@ exports.handler = function (event, context, callback) {
                             }
                             ddb.put({
                                 TableName: 'site-data',
-                                Item: { 'domain': url }
+                                Item: { 'domain': 'my-favorite-site.com', 'url': url }
                             }, function (err, data) {
                                 if (err) {
                                     throw err;
